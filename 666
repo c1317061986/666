@@ -1,0 +1,131 @@
+#include <reg52.h>
+#include <intrins.h>
+#include "DS1302.h"
+#include "LCD1602.h"
+
+#define uchar unsigned char
+#define uint unsigned int
+
+// 温度传感器
+sbit DSPORT = P3^7;
+
+// 按键
+sbit key1 = P1^0;
+sbit key2 = P1^1;
+sbit key3 = P1^2;
+
+// 报警器
+sbit buzzer = P1^3;
+
+// LED灯
+sbit led = P1^4;
+
+// 直流电机
+sbit motor = P1^5;
+
+// 温度阈值，初始值为34°C
+uchar temp_threshold = 34;
+
+// 保存当前时间的结构体
+struct Time {
+    uchar year; // 年
+    uchar month; // 月
+    uchar day; // 日
+    uchar hour; // 时
+    uchar minute; // 分
+    uchar second; // 秒
+};
+
+// 初始化系统
+void InitSystem();
+
+// 从温度传感器获取温度
+uchar GetTemperature();
+
+// 设置温度阈值
+void SetTemperatureThreshold();
+
+// 检测按键状态
+void KeyScan();
+
+// 检测并处理报警状态
+void CheckAlarm(uchar temperature);
+
+// 启动直流电机
+void StartDCMotor(uchar temperature);
+
+// 保存温度信息到DS1302中
+void SaveTemperatureToDS1302(struct Time time, uchar temperature);
+
+// 主函数
+void main()
+{
+    InitSystem();
+    while (1) {
+        uchar temperature = GetTemperature();
+        SetTemperatureThreshold();
+        KeyScan();
+        CheckAlarm(temperature);
+        StartDCMotor(temperature);
+        delayms(100);
+    }
+}
+
+void InitSystem()
+{
+    InitDS1302();
+    InitLCD1602();
+}
+
+uchar GetTemperature()
+{
+    uchar value;
+    uchar negative = 0;
+    uchar temp;
+    DSPORT = 1;
+    delayms(1);
+    DSPORT = 0;
+    _nop_();
+    _nop_();
+    _nop_();
+    _nop_();
+    value = DSPORT;
+    delayms(1);
+    if (value == 0) {
+        negative = 1;
+    }
+    DSPORT = 1;
+    delayms(1);
+    DSPORT = 0;
+    _nop_();
+    _nop_();
+    _nop_();
+    _nop_();
+    value = DSPORT;
+    delayms(1);
+    temp = value;
+    if (negative == 1) {
+        temp = ~temp;
+        temp++;
+    }
+    return temp;
+}
+
+void SetTemperatureThreshold()
+{
+    if (key2 == 0) {
+        delayms(20);
+        if (key2 == 0) {
+            temp_threshold++;
+            if (temp_threshold > 120) {
+                temp_threshold = 0;
+            }
+            ShowTemperatureThreshold(temp_threshold);
+        }
+    }
+}
+
+void KeyScan()
+{
+    if (key1 == 0) {
+        delayms(5
